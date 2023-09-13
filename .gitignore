@@ -13,6 +13,9 @@ logs
 logs/*
 validation_prompts.txt
 
-
+# data file
 *.bin
+
+# IDE file
+.idea/
 
