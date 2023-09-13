@@ -12,3 +12,7 @@ negative/*
 logs
 logs/*
 validation_prompts.txt
+
+
+*.bin
+
