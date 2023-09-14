@@ -1,16 +1,20 @@
 import torch
 from diffusers.models.cross_attention import LoRACrossAttnProcessor
 from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionXLPipeline
+
 import hashlib
 
 import gradio as gr
 
 # load a pretrained sd model, and then load the LoRA weights
 def create_model(weight_path):
-    model = StableDiffusionPipeline.from_pretrained(
-        "CompVis/stable-diffusion-v1-4",
+    model = StableDiffusionXLPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-xl-base-1.0",
         torch_dtype=torch.float16,
-    ).to("cuda")
+        variant="fp16",
+        use_safetensors=True
+    )
     if not weight_path:
         return model
     model_weight = torch.load(weight_path, map_location='cpu')
