@@ -1,6 +1,5 @@
 regularization_images
 regularization_images/*
-regularization_images_sampled
 regularization_images_sampled/*
 
 good_images
@@ -21,4 +20,6 @@ validation_prompts.txt
 
 # IDE file
 .idea/
+
+
 
