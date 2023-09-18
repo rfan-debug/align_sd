@@ -1,10 +1,11 @@
-import torch
-import clip
-from PIL import Image
-from torch.utils.data import Dataset
+import argparse
 import json
 import os
-import argparse
+
+import clip
+import torch
+from PIL import Image
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser("Evaluate HPS")

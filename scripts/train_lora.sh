@@ -1,5 +1,5 @@
 accelerate launch train_text_to_image_lora.py \
---pretrained_model_name_or_path CompVis/stable-diffusion-v1-4 \
+--pretrained_model_name_or_path stabilityai/stable-diffusion-xl-base-1.0 \
 --annotation_file annotation.jsonl \
 --regularization_annotation regularization_images.jsonl \
 --resolution 512 \
@@ -16,4 +16,4 @@ accelerate launch train_text_to_image_lora.py \
 --report_to tensorboard \
 --resume_from_checkpoint latest \
 --dataloader_num_workers 4 \
---max_train_steps 10000 \
+--max_train_steps 10000
