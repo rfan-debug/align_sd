@@ -3,6 +3,9 @@ regularization_images/*
 regularization_images_sampled
 regularization_images_sampled/*
 
+models/*
+checkpoints/*
+
 good_images
 good_images/*
 positive
