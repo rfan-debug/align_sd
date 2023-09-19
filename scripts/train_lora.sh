@@ -10,7 +10,7 @@ accelerate launch train_text_to_image_lora.py \
 --lr_scheduler constant \
 --lr_warmup_steps 0 \
 --seed 42 \
---output_dir $work_dir \
+--output_dir "./lora_output" \
 --validation_prompt_file validation_prompts.txt \
 --validation_iters 5000 \
 --report_to tensorboard \
