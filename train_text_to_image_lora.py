@@ -20,7 +20,6 @@ import logging
 import math
 import os
 import random
-from pathlib import Path
 from typing import Optional
 from PIL import Image
 
@@ -33,14 +32,13 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed
-from datasets import load_dataset, concatenate_datasets
-from huggingface_hub import HfFolder, Repository, create_repo, whoami
+from huggingface_hub import HfFolder, whoami
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, DiffusionPipeline, UNet2DConditionModel, StableDiffusionPipeline
+from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel, StableDiffusionPipeline
 from diffusers.loaders import AttnProcsLayers
 from diffusers.models.cross_attention import LoRACrossAttnProcessor
 from diffusers.optimization import get_scheduler
