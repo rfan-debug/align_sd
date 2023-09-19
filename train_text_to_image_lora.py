@@ -38,7 +38,7 @@ from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel, StableDiffusionPipeline
+from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel, StableDiffusionPipeline, StableDiffusionXLPipeline
 from diffusers.loaders import AttnProcsLayers
 from diffusers.models.cross_attention import LoRACrossAttnProcessor
 from diffusers.optimization import get_scheduler
@@ -710,7 +710,7 @@ def main():
                         f"Running validation... \n Generating {args.num_validation_images} images"
                     )
                     # create pipeline
-                    pipeline = StableDiffusionPipeline.from_pretrained(
+                    pipeline = StableDiffusionXLPipeline.from_pretrained(
                         args.pretrained_model_name_or_path,
                         unet=accelerator.unwrap_model(unet),
                         revision=args.revision,
