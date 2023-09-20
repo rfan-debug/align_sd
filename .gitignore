@@ -4,6 +4,8 @@ regularization_images_sampled
 regularization_images_sampled/*
 
 lora_output*
+lora_output2*
+**/wandb
 
 models/*
 checkpoints/*
