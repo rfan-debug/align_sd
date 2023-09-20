@@ -10,10 +10,10 @@ accelerate launch train_text_to_image_lora.py \
 --lr_scheduler constant \
 --lr_warmup_steps 0 \
 --seed 42 \
---output_dir "./lora_output" \
+--output_dir "./lora_output2" \
 --validation_prompt_file validation_prompts.txt \
 --validation_iters 5000 \
---report_to tensorboard \
+--report_to wandb \
 --resume_from_checkpoint latest \
---dataloader_num_workers 4 \
---max_train_steps 10000
+--dataloader_num_workers 8 \
+--max_train_steps 5000
