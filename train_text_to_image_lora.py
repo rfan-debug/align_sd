@@ -712,7 +712,7 @@ def main():
                         f"Running validation... \n Generating {args.num_validation_images} images"
                     )
                     # create pipeline
-                    pipeline = StableDiffusionXLPipeline.from_pretrained(
+                    pipeline = StableDiffusionPipeline.from_pretrained(
                         args.pretrained_model_name_or_path,
                         unet=accelerator.unwrap_model(unet),
                         revision=args.revision,

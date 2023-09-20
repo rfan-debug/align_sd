@@ -1,5 +1,5 @@
 accelerate launch train_text_to_image_lora.py \
---pretrained_model_name_or_path stabilityai/stable-diffusion-xl-base-1.0 \
+--pretrained_model_name_or_path CompVis/stable-diffusion-v1-4 \
 --annotation_file annotation.jsonl \
 --regularization_annotation regularization_images.jsonl \
 --resolution 512 \
