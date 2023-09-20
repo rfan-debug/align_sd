@@ -3,6 +3,8 @@ regularization_images/*
 regularization_images_sampled
 regularization_images_sampled/*
 
+lora_output*
+
 models/*
 checkpoints/*
 
