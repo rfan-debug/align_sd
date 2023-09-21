@@ -20,7 +20,6 @@ import logging
 import math
 import os
 import random
-from typing import Optional
 from PIL import Image
 
 import datasets
@@ -32,7 +31,6 @@ import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed, ProjectConfiguration
-from huggingface_hub import HfFolder, whoami
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
@@ -322,16 +320,6 @@ def parse_args():
         args.local_rank = env_local_rank
 
     return args
-
-
-def get_full_repo_name(model_id: str, organization: Optional[str] = None, token: Optional[str] = None):
-    if token is None:
-        token = HfFolder.get_token()
-    if organization is None:
-        username = whoami(token)["name"]
-        return f"{username}/{model_id}"
-    else:
-        return f"{organization}/{model_id}"
 
 
 def main():
