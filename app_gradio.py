@@ -39,7 +39,7 @@ def create_model(weight_path):
         ).to("cuda")
     unet.set_attn_processor(lora_attn_procs)
     unet.load_state_dict(model_weight, strict=False)
-    return model
+    return model.to("cuda")
 
 original = create_model("")
 adapted = create_model("lora_output2/pytorch_lora_weights.bin")
