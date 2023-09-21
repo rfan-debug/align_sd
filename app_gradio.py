@@ -14,7 +14,7 @@ def create_model(weight_path):
         torch_dtype=torch.float16,
         # variant="fp16",
         # use_safetensors=True
-    )
+    ).to("cuda")
     if not weight_path:
         return model
     model_weight = torch.load(weight_path, map_location='cpu')
@@ -39,7 +39,7 @@ def create_model(weight_path):
         ).to("cuda")
     unet.set_attn_processor(lora_attn_procs)
     unet.load_state_dict(model_weight, strict=False)
-    return model.to("cuda")
+    return model
 
 original = create_model("")
 adapted = create_model("lora_output2/pytorch_lora_weights.bin")
