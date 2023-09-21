@@ -23,10 +23,13 @@ import random
 from PIL import Image
 
 import datasets
+import datasets.utils.logging
 import numpy as np
 import torch
+import torch.backends.cuda
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import torch.utils.data
 import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
@@ -34,15 +37,16 @@ from accelerate.utils import set_seed, ProjectConfiguration
 from torchvision import transforms
 from tqdm.auto import tqdm
 from transformers import CLIPTextModel, CLIPTokenizer
+import transformers.utils.logging
 
 import diffusers
-from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel, StableDiffusionPipeline, StableDiffusionXLPipeline
+from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel, StableDiffusionPipeline, \
+    StableDiffusionXLPipeline
 from diffusers.loaders import AttnProcsLayers
 from diffusers.models.cross_attention import LoRACrossAttnProcessor
 from diffusers.optimization import get_scheduler
 from diffusers.utils import check_min_version, is_wandb_available
 from diffusers.utils.import_utils import is_xformers_available
-
 
 # Will error if the minimal version of diffusers is not installed. Remove at your own risks.
 check_min_version("0.13.0.dev0")
@@ -120,10 +124,12 @@ def parse_args():
         "--negative_prefix", type=str, default="Weird image. ", help="The column of the dataset containing an image."
     )
     parser.add_argument(
-        "--validation_prompt_file", type=str, default=None, help="A file with prompts that is sampled during training for inference."
+        "--validation_prompt_file", type=str, default=None,
+        help="A file with prompts that is sampled during training for inference."
     )
     parser.add_argument(
-        "--evaluation_prompts", type=str, default="validation_prompts_1000.json", help="A file with prompts that is sampled during training for evaluation."
+        "--evaluation_prompts", type=str, default="validation_prompts_1000.json",
+        help="A file with prompts that is sampled during training for evaluation."
     )
     parser.add_argument(
         "--num_validation_images",
@@ -419,6 +425,7 @@ def main():
     lora_attn_procs = {}
     for name in unet.attn_processors.keys():
         cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
+        hidden_size = None
         if name.startswith("mid_block"):
             hidden_size = unet.config.block_out_channels[-1]
         elif name.startswith("up_blocks"):
@@ -442,7 +449,7 @@ def main():
 
     if args.scale_lr:
         args.learning_rate = (
-            args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
+                args.learning_rate * args.gradient_accumulation_steps * args.train_batch_size * accelerator.num_processes
         )
 
     # Initialize the optimizer
@@ -470,7 +477,7 @@ def main():
     # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
 
     class ImageTextDataset(torch.utils.data.Dataset):
-            
+
         def __init__(self, dataset_folder, annotation_file, regularization_file, tokenizer, transforms, args):
 
             self.tokenizer = tokenizer
@@ -494,10 +501,10 @@ def main():
                         self.images.append(os.path.join(dataset_folder, data['file_name']))
                         prompt = data['caption']
                         self.captions.append(prompt)
-        
+
         def __len__(self):
             return len(self.images)
-        
+
         def __getitem__(self, idx):
             image = Image.open(self.images[idx]).convert('RGB')
             if self.transforms is not None:
@@ -506,7 +513,8 @@ def main():
                 prompt = ""
             else:
                 prompt = self.captions[idx]
-            inputs = self.tokenizer(prompt, padding="max_length", truncation=True, max_length=self.tokenizer.model_max_length, return_tensors="pt")
+            inputs = self.tokenizer(prompt, padding="max_length", truncation=True,
+                                    max_length=self.tokenizer.model_max_length, return_tensors="pt")
             return dict(
                 pixel_values=image,
                 input_ids=inputs.input_ids,
@@ -524,7 +532,8 @@ def main():
     )
 
     with accelerator.main_process_first():
-        train_dataset = ImageTextDataset(args.dataset_folder, args.annotation_file, args.regularization_annotation, tokenizer, train_transforms, args)
+        train_dataset = ImageTextDataset(args.dataset_folder, args.annotation_file, args.regularization_annotation,
+                                         tokenizer, train_transforms, args)
 
     def collate_fn(examples):
         pixel_values = torch.stack([example["pixel_values"] for example in examples])
@@ -564,11 +573,11 @@ def main():
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
     if overrode_max_train_steps:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
-    # Afterwards we recalculate our number of training epochs
+    # Afterward we recalculate our number of training epochs
     args.num_train_epochs = math.ceil(args.max_train_steps / num_update_steps_per_epoch)
 
     # We need to initialize the trackers we use, and also store our configuration.
-    # The trackers initializes automatically on the main process.
+    # The trackers initialize automatically on the main process.
     if accelerator.is_main_process:
         accelerator.init_trackers("train text2image LoRA", config=vars(args))
 
@@ -710,7 +719,7 @@ def main():
                     )
                     pipeline = pipeline.to(accelerator.device)
                     pipeline.set_progress_bar_config(disable=True)
-                    
+
                     # log example images for visualization
                     for pt_id, validation_prompt in enumerate(validation_prompts):
                         # run inference
@@ -725,24 +734,29 @@ def main():
                         neg_images = []
                         for _ in range(args.num_validation_images):
                             neg_images.append(
-                                pipeline(args.negative_prefix + validation_prompt, num_inference_steps=50, generator=neg_generator).images[0]
+                                pipeline(args.negative_prefix + validation_prompt, num_inference_steps=50,
+                                         generator=neg_generator).images[0]
                             )
 
                         pos_generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
                         pos_images = []
                         for _ in range(args.num_validation_images):
                             pos_images.append(
-                                pipeline(validation_prompt, num_inference_steps=50, generator=pos_generator, negative_prompt=args.negative_prefix).images[0]
+                                pipeline(validation_prompt, num_inference_steps=50, generator=pos_generator,
+                                         negative_prompt=args.negative_prefix).images[0]
                             )
 
                         for tracker in accelerator.trackers:
                             if tracker.name == "tensorboard":
                                 np_images = np.stack([np.asarray(img) for img in images])
-                                tracker.writer.add_images(f"validation_{pt_id}_neutral", np_images, global_step, dataformats="NHWC")
+                                tracker.writer.add_images(f"validation_{pt_id}_neutral", np_images, global_step,
+                                                          dataformats="NHWC")
                                 neg_np_images = np.stack([np.asarray(img) for img in neg_images])
-                                tracker.writer.add_images(f"validation_{pt_id}_negative", neg_np_images, global_step, dataformats="NHWC")
+                                tracker.writer.add_images(f"validation_{pt_id}_negative", neg_np_images, global_step,
+                                                          dataformats="NHWC")
                                 pos_np_images = np.stack([np.asarray(img) for img in pos_images])
-                                tracker.writer.add_images(f"validation_{pt_id}_positive", pos_np_images, global_step, dataformats="NHWC")
+                                tracker.writer.add_images(f"validation_{pt_id}_positive", pos_np_images, global_step,
+                                                          dataformats="NHWC")
                             if tracker.name == "wandb":
                                 tracker.log(
                                     {
@@ -751,11 +765,13 @@ def main():
                                             for i, image in enumerate(images)
                                         ],
                                         "validation_negative": [
-                                            wandb.Image(image, caption=f"{i}: {args.negative_prefix + validation_prompt}")
+                                            wandb.Image(image,
+                                                        caption=f"{i}: {args.negative_prefix + validation_prompt}")
                                             for i, image in enumerate(neg_images)
                                         ],
                                         "validation_positive": [
-                                            wandb.Image(image, caption=f"{i}: {'-' + args.negative_prefix + validation_prompt}")
+                                            wandb.Image(image,
+                                                        caption=f"{i}: {'-' + args.negative_prefix + validation_prompt}")
                                             for i, image in enumerate(pos_images)
                                         ],
                                     }
@@ -772,7 +788,7 @@ def main():
 
     # skip final inference
     accelerator.end_training()
-    return 
+    return
 
 
 if __name__ == "__main__":
