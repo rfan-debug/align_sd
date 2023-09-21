@@ -42,7 +42,7 @@ def create_model(weight_path):
     return model
 
 original = create_model("")
-adapted = create_model("adapted_model.bin")
+adapted = create_model("lora_output2/pytorch_lora_weights.bin")
 
 def inference(prompt):
     # create a hash of the prompt
