@@ -8,7 +8,7 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser("create a dataset with hps")
-parser.add_argument("--source_dataset", default='large_first_1m', type=str)
+parser.add_argument("--source_dataset", default='large_first_10k', type=str)
 parser.add_argument("--clip_checkpoint", type=str)
 parser.add_argument("--meta_file", type=str)
 

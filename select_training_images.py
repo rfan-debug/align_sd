@@ -1,15 +1,12 @@
 import json
 from datasets import load_dataset
-import torch
-import open_clip
 import os
 import numpy as np
 import argparse
 from tqdm import tqdm
-from collections import Counter
 
 parser = argparse.ArgumentParser("create a dataset with human preference")
-parser.add_argument("--source_dataset", default='large_first_1m', type=str)
+parser.add_argument("--source_dataset", default='large_first_10k', type=str)
 parser.add_argument("--positive_folder", type=str)
 parser.add_argument("--negative_folder", type=str)
 parser.add_argument("--meta_file", type=str)

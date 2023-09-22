@@ -1,18 +1,6 @@
 regularization_images
 regularization_images/*
-regularization_images_sampled
 regularization_images_sampled/*
-
-lora_output*
-lora_output2*
-**/wandb
-
-**/.ipynb_checkpoints
-**/*.parquet
-
-
-models/*
-checkpoints/*
 
 good_images
 good_images/*
@@ -32,4 +20,6 @@ validation_prompts.txt
 
 # IDE file
 .idea/
+
+
 

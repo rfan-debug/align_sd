@@ -1,19 +1,24 @@
+import safetensors.torch
 import torch
-from diffusers.models.cross_attention import LoRACrossAttnProcessor
-from diffusers import StableDiffusionPipeline
+import torch.nn.functional as F
+from diffusers.models.attention_processor import LoRAAttnProcessor2_0, LoRAAttnProcessor
+from diffusers import StableDiffusionXLPipeline
+
 import hashlib
 
 import gradio as gr
 
 # load a pretrained sd model, and then load the LoRA weights
 def create_model(weight_path):
-    model = StableDiffusionPipeline.from_pretrained(
-        "CompVis/stable-diffusion-v1-4",
+    model = StableDiffusionXLPipeline.from_pretrained(
+        "stabilityai/stable-diffusion-xl-base-1.0",
         torch_dtype=torch.float16,
+        variant="fp16",
+        use_safetensors=True
     ).to("cuda")
     if not weight_path:
         return model
-    model_weight = torch.load(weight_path, map_location='cpu')
+    model_weight = safetensors.torch.load_file(weight_path, device="cpu")
     unet = model.unet
     lora_attn_procs = {}
     lora_rank = list(set([v.size(0) for k, v in model_weight.items() if k.endswith("down.weight")]))
@@ -21,6 +26,7 @@ def create_model(weight_path):
     lora_rank = lora_rank[0]
     for name in unet.attn_processors.keys():
         cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
+        hidden_size = None
         if name.startswith("mid_block"):
             hidden_size = unet.config.block_out_channels[-1]
         elif name.startswith("up_blocks"):
@@ -30,15 +36,21 @@ def create_model(weight_path):
             block_id = int(name[len("down_blocks.")])
             hidden_size = unet.config.block_out_channels[block_id]
 
-        lora_attn_procs[name] = LoRACrossAttnProcessor(
-            hidden_size=hidden_size, cross_attention_dim=cross_attention_dim, rank=lora_rank
-        ).to("cuda")
+        if hasattr(F, "scaled_dot_product_attention"):
+            lora_attn_procs[name] = LoRAAttnProcessor2_0(
+                hidden_size=hidden_size, cross_attention_dim=cross_attention_dim, rank=lora_rank,
+            ).to("cuda")
+        else:
+            lora_attn_procs[name] = LoRAAttnProcessor(
+                hidden_size=hidden_size, cross_attention_dim=cross_attention_dim, rank=lora_rank,
+            ).to("cuda")
+
     unet.set_attn_processor(lora_attn_procs)
     unet.load_state_dict(model_weight, strict=False)
     return model
 
 original = create_model("")
-adapted = create_model("adapted_model.bin")
+adapted = create_model("lora_output_sdxl/pytorch_lora_weights.safetensors")
 
 def inference(prompt):
     # create a hash of the prompt
