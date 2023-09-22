@@ -591,13 +591,11 @@ def main(args):
         vae_path,
         subfolder="vae" if args.pretrained_vae_model_name_or_path is None else None,
         revision=args.revision,
-        torch_dtype=weight_dtype,
     )
     unet = UNet2DConditionModel.from_pretrained(
         args.pretrained_model_name_or_path,
         subfolder="unet",
         revision=args.revision,
-        torch_dtype=weight_dtype,
     )
 
     # freeze parameters of models to save more memory
@@ -1040,6 +1038,7 @@ def main(args):
                     # Finally, we take the mean of the rebalanced loss.
                     loss = F.mse_loss(model_pred.float(), target.float(), reduction="none")
                     loss = loss.mean(dim=list(range(1, len(loss.shape)))) * mse_loss_weights
+                    loss = loss.mean()
 
                 # Gather the losses across all processes for logging (if we use distributed training).
                 avg_loss = accelerator.gather(loss.repeat(args.train_batch_size)).mean()
@@ -1097,27 +1096,28 @@ def main(args):
             if global_step >= args.max_train_steps:
                 break
 
-            if accelerator.is_main_process:
-                if args.validation_prompt_file is not None and (global_step - 1) % args.validation_iters == 0:
-                    logger.info(
-                        f"Running validation... \n Generating {args.num_validation_images} images"
-                    )
-                    # create pipeline
-                    pipeline = StableDiffusionXLPipeline.from_pretrained(
-                        args.pretrained_model_name_or_path,
-                        vae=vae,
-                        text_encoder=accelerator.unwrap_model(text_encoder_one),
-                        text_encoder_2=accelerator.unwrap_model(text_encoder_two),
-                        unet=accelerator.unwrap_model(unet),
-                        revision=args.revision,
-                        variant=accelerator.mixed_precision,
-                        torch_dtype=weight_dtype,
-                    )
-                    print("VAE type", vae.dtype)
+        if accelerator.is_main_process:
+            if args.validation_prompt_file is not None and (global_step - 1) % args.validation_iters == 0:
+                logger.info(
+                    f"Running validation... \n Generating {args.num_validation_images} images"
+                )
+                # create pipeline
+                pipeline = StableDiffusionXLPipeline.from_pretrained(
+                    args.pretrained_model_name_or_path,
+                    vae=vae,
+                    text_encoder=accelerator.unwrap_model(text_encoder_one),
+                    text_encoder_2=accelerator.unwrap_model(text_encoder_two),
+                    unet=accelerator.unwrap_model(unet),
+                    revision=args.revision,
+                    torch_dtype=weight_dtype,
+                )
+                print("VAE type", vae.dtype)
 
-                    pipeline = pipeline.to(accelerator.device)
-                    pipeline.set_progress_bar_config(disable=True)
+                pipeline = pipeline.to(accelerator.device)
+                pipeline.set_progress_bar_config(disable=True)
 
+
+                with torch.cuda.amp.autocast():
                     # log example images for visualization
                     for pt_id, validation_prompt in enumerate(validation_prompts):
                         # run inference
@@ -1176,8 +1176,8 @@ def main(args):
                                     }
                                 )
 
-                    del pipeline
-                    torch.cuda.empty_cache()
+                del pipeline
+                torch.cuda.empty_cache()
 
     # Save the lora layers
     accelerator.wait_for_everyone()
