@@ -386,6 +386,13 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--prediction_type",
+        type=str,
+        default=None,
+        help="The prediction_type that shall be used for training. Choose between 'epsilon' or 'v_prediction' or leave `None`. If left to `None` the default prediction type of the scheduler:"
+        "`noise_scheduler.config.prediciton_type` is chosen.",
+    )
+    parser.add_argument(
         "--mixed_precision",
         type=str,
         default=None,
@@ -430,6 +437,7 @@ def parse_args():
             ' `--checkpointing_steps`, or `"latest"` to automatically select the last available checkpoint.'
         ),
     )
+    parser.add_argument("--noise_offset", type=float, default=0, help="The scale of noise offset.")
     parser.add_argument(
         "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
     )
@@ -939,6 +947,7 @@ def main(args):
                     pixel_values = batch["pixel_values"]
 
                 # Convert images to latent space
+                print("weight_dtype", weight_dtype)
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
