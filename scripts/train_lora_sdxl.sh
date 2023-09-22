@@ -17,4 +17,4 @@ accelerate launch train_text_to_image_lora.py \
 --report_to wandb \
 --resume_from_checkpoint latest \
 --dataloader_num_workers 8 \
---max_train_steps 5000
+--max_train_steps 20000
