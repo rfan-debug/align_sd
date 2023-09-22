@@ -960,12 +960,20 @@ def main(args):
                 if args.pretrained_vae_model_name_or_path is None:
                     latents = latents.to(weight_dtype)
 
+                print("Latents type", latents.torch_dtype)
+
                 # Sample noise that we'll add to the latents
-                noise = torch.randn_like(latents)
+                noise = torch.randn_like(latents, dtype=weight_dtype)
+
+                print("Noise type", noise.dtype)
+
+
                 if args.noise_offset:
                     # https://www.crosslabs.org//blog/diffusion-with-offset-noise
                     noise += args.noise_offset * torch.randn(
-                        (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
+                        (latents.shape[0], latents.shape[1], 1, 1),
+                        dtype=weight_dtype,
+                        device=latents.device
                     )
 
                 bsz = latents.shape[0]
@@ -1106,6 +1114,8 @@ def main(args):
                         requires_safety_checker=False,
                         safety_checker=None,
                     )
+                    print("VAE type", vae.torch_dtype)
+
                     pipeline = pipeline.to(accelerator.device)
                     pipeline.set_progress_bar_config(disable=True)
 
@@ -1113,6 +1123,7 @@ def main(args):
                     for pt_id, validation_prompt in enumerate(validation_prompts):
                         # run inference
                         generator = torch.Generator(device=accelerator.device).manual_seed(args.seed)
+
                         images = []
                         for _ in range(args.num_validation_images):
                             images.append(
