@@ -960,7 +960,7 @@ def main(args):
                 if args.pretrained_vae_model_name_or_path is None:
                     latents = latents.to(weight_dtype)
 
-                print("Latents type", latents.torch_dtype)
+                print("Latents type", latents.dtype)
 
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents, dtype=weight_dtype)
