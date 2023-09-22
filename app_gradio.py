@@ -10,10 +10,10 @@ import gradio as gr
 # load a pretrained sd model, and then load the LoRA weights
 def create_model(weight_path):
     model = StableDiffusionPipeline.from_pretrained(
-        "CompVis/stable-diffusion-v1-4",
+        "stabilityai/stable-diffusion-xl-base-1.0",
         torch_dtype=torch.float16,
-        # variant="fp16",
-        # use_safetensors=True
+        variant="fp16",
+        use_safetensors=True
     ).to("cuda")
     if not weight_path:
         return model
