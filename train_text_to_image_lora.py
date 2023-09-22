@@ -1110,9 +1110,8 @@ def main(args):
                         text_encoder_2=accelerator.unwrap_model(text_encoder_two),
                         unet=accelerator.unwrap_model(unet),
                         revision=args.revision,
+                        variant=accelerator.mixed_precision,
                         torch_dtype=weight_dtype,
-                        requires_safety_checker=False,
-                        safety_checker=None,
                     )
                     print("VAE type", vae.dtype)
 
