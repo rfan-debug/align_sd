@@ -22,9 +22,9 @@ import math
 import os
 import random
 import shutil
-from typing import Dict
+from typing import Dict, Tuple, Any
 
-
+import PIL.Image
 from packaging import version
 
 from PIL import Image
@@ -42,6 +42,7 @@ from accelerate import Accelerator
 from accelerate.logging import get_logger
 from accelerate.utils import set_seed, ProjectConfiguration
 from torchvision import transforms
+from torchvision.transforms.functional import crop
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer, PretrainedConfig
 import transformers.utils.logging
@@ -81,6 +82,7 @@ def import_model_class_from_model_name_or_path(
     else:
         raise ValueError(f"{model_class} is not supported.")
 
+
 # Get the datasets: you can either provide your own training and evaluation files (see below)
 # or specify a Dataset from the hub (the dataset will be downloaded automatically from the datasets Hub).
 class ImageTextDataset(torch.utils.data.Dataset):
@@ -92,11 +94,17 @@ class ImageTextDataset(torch.utils.data.Dataset):
                  tokenizer_one,
                  tokenizer_two,
                  transforms,
+                 train_resize,
+                 train_crop,
+                 train_flip,
                  args):
 
         self.tokenizer_one = tokenizer_one
         self.tokenizer_two = tokenizer_two
         self.transforms = transforms
+        self.train_resize = train_resize
+        self.train_crop = train_crop
+        self.train_flip = train_flip
         self.args = args
 
         self.images = []
@@ -107,7 +115,7 @@ class ImageTextDataset(torch.utils.data.Dataset):
                 self.images.append(os.path.join(dataset_folder, data['file_name']))
                 prompt = data['prompt']
                 if data['type'] == "negative":
-                    prompt = args.negative_prefix + prompt
+                    prompt = self.args.negative_prefix + prompt
                 self.captions.append(prompt)
         if regularization_file is not None:
             with open(regularization_file, 'r') as f:
@@ -120,19 +128,38 @@ class ImageTextDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.images)
 
+    def _preprocess_image(self, image: PIL.Image.Image) -> (Tuple, Tuple, Any):
+        """
+        :return: original_size, crop_top_left, transformed image
+        """
+
+        original_size = (image.height, image.width)
+
+        image = self.train_resize(image)
+        if self.args.center_crop:
+            y1 = max(0, int(round((image.height - self.args.resolution) / 2.0)))
+            x1 = max(0, int(round((image.width - self.args.resolution) / 2.0)))
+            image = self.train_crop(image)
+        else:
+            y1, x1, h, w = self.train_crop.get_params(image, (self.args.resolution, self.args.resolution))
+            image = crop(image, y1, x1, h, w)
+        if self.args.random_flip and random.random() < 0.5:
+            # flip
+            x1 = image.width - x1
+            image = self.train_flip(image)
+        crop_top_left = (y1, x1)
+        image = self.transforms(image)
+        return original_size, crop_top_left, image
+
     def __getitem__(self, idx):
         image = Image.open(self.images[idx]).convert('RGB')
-        if self.transforms is not None:
-            image = self.transforms(image)
-        if random.random() < self.args.prompt_dropout:
-            prompt = ""
-        else:
-            prompt = self.captions[idx]
+        original_size, crop_top_left, image = self._preprocess_image(image)
+        prompt = self.captions[idx]
         inputs_one = self.tokenizer_one(prompt,
-                                padding="max_length",
-                                truncation=True,
-                                max_length=self.tokenizer_one.model_max_length,
-                                return_tensors="pt")
+                                        padding="max_length",
+                                        truncation=True,
+                                        max_length=self.tokenizer_one.model_max_length,
+                                        return_tensors="pt")
         inputs_two = self.tokenizer_two(prompt,
                                         padding="max_length",
                                         truncation=True,
@@ -141,6 +168,8 @@ class ImageTextDataset(torch.utils.data.Dataset):
 
         return dict(
             pixel_values=image,
+            original_size=original_size,
+            crop_top_left=crop_top_left,
             input_ids_one=inputs_one.input_ids,
             input_ids_two=inputs_two.input_ids,
         )
@@ -186,9 +215,6 @@ def parse_args():
         default=None,
         required=False,
         help="Revision of pretrained model identifier from huggingface.co/models.",
-    )
-    parser.add_argument(
-        "--prompt_dropout", type=float, default=0.0, help="drop out rate of prompt for classifier free guidance."
     )
     parser.add_argument(
         "--negative_prefix", type=str, default="Weird image. ", help="The column of the dataset containing an image."
@@ -415,6 +441,7 @@ def parse_args():
 
     return args
 
+
 def unet_attn_processors_state_dict(unet) -> Dict[str, torch.tensor]:
     """
     Returns:
@@ -470,6 +497,7 @@ def encode_prompt(text_encoders, tokenizers, prompt, text_input_ids_list=None):
     prompt_embeds = torch.concat(prompt_embeds_list, dim=-1)
     pooled_prompt_embeds = pooled_prompt_embeds.view(bs_embed, -1)
     return prompt_embeds, pooled_prompt_embeds
+
 
 def main(args):
     logging_dir = os.path.join(args.output_dir, args.logging_dir)
@@ -629,13 +657,12 @@ def main(args):
 
     unet.set_attn_processor(unet_lora_attn_procs)
 
-
     def compute_snr(timesteps):
         """
         Computes SNR as per https://github.com/TiankaiHang/Min-SNR-Diffusion-Training/blob/521b624bd70c67cee4bdf49225915f5945a872e3/guided_diffusion/gaussian_diffusion.py#L847-L849
         """
         alphas_cumprod = noise_scheduler.alphas_cumprod
-        sqrt_alphas_cumprod = alphas_cumprod**0.5
+        sqrt_alphas_cumprod = alphas_cumprod ** 0.5
         sqrt_one_minus_alphas_cumprod = (1.0 - alphas_cumprod) ** 0.5
         # Expand the tensors.
         # Adapted from https://github.com/TiankaiHang/Min-SNR-Diffusion-Training/blob/521b624bd70c67cee4bdf49225915f5945a872e3/guided_diffusion/gaussian_diffusion.py#L1026
@@ -747,7 +774,6 @@ def main(args):
     else:
         optimizer_cls = torch.optim.AdamW
 
-
     # Optimizer creation
     params_to_optimize = (
         itertools.chain(unet_lora_parameters, text_lora_parameters_one, text_lora_parameters_two)
@@ -765,9 +791,6 @@ def main(args):
     # Preprocessing the datasets.
     train_transforms = transforms.Compose(
         [
-            transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(args.resolution) if args.center_crop else transforms.RandomCrop(args.resolution),
-            transforms.RandomHorizontalFlip(p=1.0) if args.random_flip else transforms.Lambda(lambda x: x),
             transforms.ToTensor(),
             transforms.Normalize([0.5], [0.5]),
         ]
@@ -780,8 +803,13 @@ def main(args):
             args.regularization_annotation,
             tokenizer_one,
             tokenizer_two,
-            train_transforms,
-            args)
+            transforms=train_transforms,
+            train_resize=transforms.Resize(args.resolution, interpolation=transforms.InterpolationMode.BILINEAR),
+            train_crop=transforms.CenterCrop(args.resolution) if args.center_crop else transforms.RandomCrop(
+                args.resolution),
+            train_flip=transforms.RandomHorizontalFlip(p=1.0),
+            args=args
+        )
 
     def collate_fn(examples):
         pixel_values = torch.stack([example["pixel_values"] for example in examples])
@@ -933,7 +961,6 @@ def main(args):
                 # Add noise to the latents according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
-
 
                 # time ids
                 def compute_time_ids(original_size, crops_coords_top_left):
