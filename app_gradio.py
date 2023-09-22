@@ -1,3 +1,4 @@
+import safetensors.torch
 import torch
 import torch.nn.functional as F
 from diffusers.models.attention_processor import LoRAAttnProcessor2_0, LoRAAttnProcessor
@@ -17,7 +18,7 @@ def create_model(weight_path):
     ).to("cuda")
     if not weight_path:
         return model
-    model_weight = torch.load(weight_path, map_location='cpu')
+    model_weight = safetensors.torch.load_file(weight_path, device="cpu")
     unet = model.unet
     lora_attn_procs = {}
     lora_rank = list(set([v.size(0) for k, v in model_weight.items() if k.endswith("down.weight")]))
