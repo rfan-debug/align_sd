@@ -951,20 +951,14 @@ def main(args):
                     pixel_values = batch["pixel_values"]
 
                 # Convert images to latent space
-                print("weight_dtype", weight_dtype)
                 latents = vae.encode(pixel_values).latent_dist.sample()
                 latents = latents * vae.config.scaling_factor
 
                 if args.pretrained_vae_model_name_or_path is None:
                     latents = latents.to(weight_dtype)
 
-                print("Latents type", latents.dtype)
-
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents, dtype=weight_dtype)
-
-                print("Noise type", noise.dtype)
-
 
                 if args.noise_offset:
                     # https://www.crosslabs.org//blog/diffusion-with-offset-noise
@@ -1111,7 +1105,6 @@ def main(args):
                     revision=args.revision,
                     torch_dtype=weight_dtype,
                 )
-                print("VAE type", vae.dtype)
 
                 pipeline = pipeline.to(accelerator.device)
                 pipeline.set_progress_bar_config(disable=True)
