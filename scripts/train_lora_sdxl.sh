@@ -3,7 +3,7 @@ accelerate launch train_text_to_image_lora.py \
 --pretrained_vae_model_name_or_path "madebyollin/sdxl-vae-fp16-fix" \
 --annotation_file annotation.jsonl \
 --regularization_annotation regularization_images.jsonl \
---resolution 512 \
+--resolution=1024 --center_crop --random_flip \
 --train_batch_size 10 \
 --num_train_epochs 99 \
 --checkpointing_steps 5000 \
