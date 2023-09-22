@@ -4,7 +4,7 @@ accelerate launch train_text_to_image_lora.py \
 --annotation_file annotation.jsonl \
 --regularization_annotation regularization_images.jsonl \
 --resolution 512 \
---train_batch_size 5 \
+--train_batch_size 10 \
 --num_train_epochs 99 \
 --checkpointing_steps 5000 \
 --learning_rate 1e-5 \
