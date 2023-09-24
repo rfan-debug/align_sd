@@ -1,4 +1,4 @@
-accelerate launch train_text_to_image_lora.py \
+accelerate launch train_text_to_image_lora_sdxl.py \
 --pretrained_model_name_or_path "stabilityai/stable-diffusion-xl-base-1.0" \
 --pretrained_vae_model_name_or_path "madebyollin/sdxl-vae-fp16-fix" \
 --annotation_file annotation.jsonl \
