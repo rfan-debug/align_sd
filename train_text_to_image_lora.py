@@ -32,7 +32,7 @@ import torch.utils.checkpoint
 import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
-from accelerate.utils import set_seed
+from accelerate.utils import set_seed, ProjectConfiguration
 from datasets import load_dataset, concatenate_datasets
 from huggingface_hub import HfFolder, Repository, create_repo, whoami
 from torchvision import transforms
@@ -344,7 +344,9 @@ def main():
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
-        logging_dir=logging_dir,
+        project_config=ProjectConfiguration(
+            logging_dir=logging_dir,
+        )
     )
     if args.report_to == "wandb":
         if not is_wandb_available():
