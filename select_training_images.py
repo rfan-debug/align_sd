@@ -6,7 +6,7 @@ import argparse
 from tqdm import tqdm
 
 parser = argparse.ArgumentParser("create a dataset with human preference")
-parser.add_argument("--source_dataset", default='large_first_10k', type=str)
+parser.add_argument("--source_dataset", default='large_first_500k', type=str)
 parser.add_argument("--positive_folder", type=str)
 parser.add_argument("--negative_folder", type=str)
 parser.add_argument("--meta_file", type=str)
@@ -16,7 +16,10 @@ parser.add_argument("--quality", default=95, type=int)
 args = parser.parse_args()
 
 # Load the dataset with the `random_1k` subset
-dataset = load_dataset('poloclub/diffusiondb', args.source_dataset, ignore_verifications=True)
+dataset = load_dataset('poloclub/diffusiondb', 
+                       args.source_dataset, 
+                       ignore_verifications=True,
+                       num_proc=4)
 
 with open(args.meta_file, 'r') as f:
     meta = [json.loads(line) for line in f.readlines()]

@@ -8,14 +8,17 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser("create a dataset with hps")
-parser.add_argument("--source_dataset", default='large_first_10k', type=str)
+parser.add_argument("--source_dataset", default='large_first_500k', type=str)
 parser.add_argument("--clip_checkpoint", type=str)
 parser.add_argument("--meta_file", type=str)
 
 args = parser.parse_args()
 
 # Load the dataset
-dataset = load_dataset('poloclub/diffusiondb', args.source_dataset, ignore_verifications=True)
+dataset = load_dataset('poloclub/diffusiondb', 
+                       args.source_dataset, 
+                       ignore_verifications=True,
+                       num_proc=4)
 
 # Load the model
 model, _, preprocess = open_clip.create_model_and_transforms('ViT-L-14', device='cuda')
@@ -49,8 +52,8 @@ class dataset_wrapper:
         )
         return ret
 
-dataloader = DataLoader(dataset_wrapper(dataset['train'], preprocess, tokenizer), batch_size=20,
-                          num_workers=4, shuffle=False)
+dataloader = DataLoader(dataset_wrapper(dataset['train'], preprocess, tokenizer), batch_size=100,
+                          num_workers=8, shuffle=False)
 
 def to_device(d, device):
     return {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in d.items()}
