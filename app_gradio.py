@@ -1,7 +1,4 @@
-import safetensors.torch
 import torch
-import torch.nn.functional as F
-from diffusers.models.attention_processor import LoRAAttnProcessor2_0, LoRAAttnProcessor
 from diffusers import StableDiffusionXLPipeline
 
 import hashlib
