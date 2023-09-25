@@ -126,11 +126,24 @@ Before training, you also need to specify $work_dir in your environment, or spec
 export work_dir=logs
 echo "your prompt here" >> validation_prompts.txt
 ```
+
+### Train SD-1.4
+
 The training script is launched via accelerator, so you need to create a configuration file in advance by running ``accelerate config``. This allows you to train on multiple machines / GPUs. You will need to change the batch size in the script if you are using more than one GPU. For example, if you have machine with 8 GPUs, you should change the batch size to 5 rather than 40. 
 ```
 # Train LoRA weights for Stable Diffusion!
 bash scripts/train_lora.sh
 ```
+
+### Train SDXL Base 1.0
+
+```
+# Train LoRA weights for Stable Diffusion XL!
+bash scripts/train_lora_sdxl.sh
+```
+
+Visualization of SDXL Lora 1.0
+![sdxl_example](assets/sdxl_example.png)
 
 
 ## Visualizations

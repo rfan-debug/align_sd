@@ -1,7 +1,4 @@
-import safetensors.torch
 import torch
-import torch.nn.functional as F
-from diffusers.models.attention_processor import LoRAAttnProcessor2_0, LoRAAttnProcessor
 from diffusers import StableDiffusionXLPipeline
 
 import hashlib
@@ -18,39 +15,14 @@ def create_model(weight_path):
     ).to("cuda")
     if not weight_path:
         return model
-    model_weight = safetensors.torch.load_file(weight_path, device="cpu")
-    unet = model.unet
-    lora_attn_procs = {}
-    lora_rank = list(set([v.size(0) for k, v in model_weight.items() if k.endswith("down.weight")]))
-    assert len(lora_rank) == 1
-    lora_rank = lora_rank[0]
-    for name in unet.attn_processors.keys():
-        cross_attention_dim = None if name.endswith("attn1.processor") else unet.config.cross_attention_dim
-        hidden_size = None
-        if name.startswith("mid_block"):
-            hidden_size = unet.config.block_out_channels[-1]
-        elif name.startswith("up_blocks"):
-            block_id = int(name[len("up_blocks.")])
-            hidden_size = list(reversed(unet.config.block_out_channels))[block_id]
-        elif name.startswith("down_blocks"):
-            block_id = int(name[len("down_blocks.")])
-            hidden_size = unet.config.block_out_channels[block_id]
 
-        if hasattr(F, "scaled_dot_product_attention"):
-            lora_attn_procs[name] = LoRAAttnProcessor2_0(
-                hidden_size=hidden_size, cross_attention_dim=cross_attention_dim, rank=lora_rank,
-            ).to("cuda")
-        else:
-            lora_attn_procs[name] = LoRAAttnProcessor(
-                hidden_size=hidden_size, cross_attention_dim=cross_attention_dim, rank=lora_rank,
-            ).to("cuda")
+    model.unet.load_attn_procs(weight_path)
+    model.to("cuda")
 
-    unet.set_attn_processor(lora_attn_procs)
-    unet.load_state_dict(model_weight, strict=False)
     return model
 
 original = create_model("")
-adapted = create_model("lora_output_sdxl/pytorch_lora_weights.safetensors")
+adapted = create_model("./lora_output_sdxl")
 
 def inference(prompt):
     # create a hash of the prompt
