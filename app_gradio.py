@@ -22,7 +22,7 @@ def create_model(weight_path):
     return model
 
 original = create_model("")
-adapted = create_model("./lora_output_sdxl")
+adapted = create_model("./lora_output_sdxl_3")
 
 def inference(prompt):
     # create a hash of the prompt

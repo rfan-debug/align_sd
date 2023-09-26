@@ -703,7 +703,9 @@ def main(args):
 
     # create custom saving & loading hooks so that `accelerator.save_state(...)` serializes in a nice format
     def save_model_hook(models, weights, output_dir):
-        if accelerator.is_main_process:
+        if accelerator.is_main_process: 
+            # Seems to be a deepspeed issue? https://github.com/microsoft/DeepSpeed/issues/2993
+            # 
             # there are only two options here. Either are just the unet attn processor layers
             # or there are the unet and text encoder atten layers
             unet_lora_layers_to_save = None
